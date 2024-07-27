@@ -1,11 +1,9 @@
 import "./Header.css";
 
-const Header = ({ currentScore, bestScore, gameMode }) => {
+const Header = ({ currentScore, bestScore, gameMode, returnStart }) => {
   return (
     <header className={`header ${!gameMode && "header--center"}`}>
-      <h1>
-        <a href="/">Pokemon Memory Game</a>
-      </h1>
+      <h1 onClick={returnStart}>Pokemon Memory Game</h1>
 
       {gameMode && (
         <div>

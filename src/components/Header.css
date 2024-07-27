@@ -7,6 +7,7 @@
 }
 
 .header h1 {
+  cursor: pointer;
   text-decoration: none;
   transform-origin: left;
   transition: transform 0.2s ease-in-out;
@@ -14,10 +15,6 @@
 
 .header--center h1 {
   transform-origin: center;
-}
-
-.header h1 a {
-  color: #242424;
 }
 
 .header h1:hover {
