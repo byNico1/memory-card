@@ -1,0 +1,19 @@
+@keyframes move {
+  0% {
+    transform: translateX(130px);
+  }
+  100% {
+    transform: translateX(-130px);
+  }
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading img {
+  animation: move 3s linear infinite;
+}
