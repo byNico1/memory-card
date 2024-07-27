@@ -1,11 +1,11 @@
 .cards {
-  max-width: 900px;
   margin: auto;
   margin-block: 3rem;
-  padding-inline: 32px;
+  padding-inline: 1.5rem;
 
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  justify-content: center;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   grid-gap: 30px;
 }
 
@@ -37,16 +37,11 @@
   }
 }
 
-.card {
-  padding: 2em;
-}
-
 .read-the-docs {
   color: #888;
 }
 
 .select-modes {
-  margin-top: 8rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -54,12 +49,14 @@
 }
 
 .select-modes h2 {
-  font-size: 1.7rem;
+  font-size: 3rem;
+  text-shadow: 6px 3px 5px #000000;
 }
 
 .modes {
-  margin-top: 2rem;
+  margin-block: 2rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: center;
   gap: 2rem;
@@ -79,4 +76,29 @@
 
 .restart button {
   font-size: 1.3rem;
+}
+
+.rounds-count {
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+@media screen and (min-width: 768px) {
+  .cards {
+    padding-inline: 3rem;
+  }
+
+  .select-modes {
+    margin-top: 8rem;
+  }
+}
+
+#myVideo {
+  position: fixed;
+  inset: 0;
+  z-index: -20;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(40%);
 }

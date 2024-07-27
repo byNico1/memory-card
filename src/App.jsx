@@ -1,17 +1,25 @@
 import "./App.css";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Header from "./components/Header";
 import Card from "./components/Card";
+import Loading from "./components/Loading";
+import video from "./assets/pokemonvid.mp4";
 
 const App = () => {
   const [pokeData, setPokeData] = useState([]);
+  const [modesPokemons, setModesPokemons] = useState([]);
+  const [showingPokemons, setShowingPokemons] = useState([]);
+
+  const [gameStatus, setGameStatus] = useState("playing");
+  const [gameMode, setGameMode] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [shuffling, setShuffling] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
+
+  const [rounds, setRounds] = useState(1);
   const [currentScore, setCurrentScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
-  // const [gameMode, setGameMode] = useState("normal");
-  const [gameMode, setGameMode] = useState(null);
-  const [showingPokemons, setShowingPokemons] = useState([]);
-  const [gameStatus, setGameStatus] = useState("playing");
 
   function getRandomNumber() {
     const numbers = [0, 1, 2];
@@ -19,19 +27,34 @@ const App = () => {
     return numbers[randomIndex];
   }
 
-  const getRandomElements = (pokemons, numElements, notClicked) => {
+  const getRandomElements = useCallback((pokemons, numElements, notClicked) => {
     const shuffled = pokemons.sort(() => 0.5 - Math.random());
     shuffled.splice(getRandomNumber(), 0, notClicked);
     return shuffled.slice(0, numElements);
+  }, []);
+
+  const returnStart = () => {
+    setIsClicked(false);
+    setShuffling(false);
+    setRounds(1);
+    setCurrentScore(0);
+    setBestScore(0);
+    setGameMode(null);
+    setGameStatus("playing");
+    setShowingPokemons([]);
+    setModesPokemons([]);
   };
 
   const restartGame = () => {
+    setIsClicked(false);
+    setShuffling(false);
+    setRounds(1);
     setCurrentScore(0);
     setBestScore(Math.max(currentScore, bestScore));
     setGameStatus("playing");
     setShowingPokemons([]);
-    setPokeData(
-      pokeData.map((pokemon) => {
+    setModesPokemons(
+      modesPokemons.map((pokemon) => {
         return {
           ...pokemon,
           clicked: false,
@@ -40,71 +63,53 @@ const App = () => {
     );
   };
 
-  const selectRandomPokemons = (pokemons) => {
-    const notClicked = pokemons.findIndex(
-      (pokemon) => pokemon.clicked === false
-    );
+  const selectRandomPokemons = useCallback(
+    (pokemons) => {
+      // try if gameMode is null to return
+      if (gameMode === null) return;
 
-    //* If all pokemons are clicked the user won
-    if (notClicked !== -1) {
-      const options = [];
-
-      pokemons.forEach((pokemon) =>
-        pokemon.id !== pokemons[notClicked].id
-          ? options.push(pokemon.id)
-          : pokemon
+      const notClicked = pokemons.findIndex(
+        (pokemon) => pokemon.clicked === false
       );
 
-      const numberOfPokemons =
-        gameMode === "easy"
-          ? 3
-          : gameMode === "normal"
-          ? 4
-          : gameMode === "hard" && 5;
+      //* If all pokemons are clicked the user won
+      if (notClicked !== -1) {
+        const options = pokemons
+          .filter((pokemon) => pokemon.id !== pokemons[notClicked].id)
+          .map((pokemon) => pokemon.id);
 
-      const selectedPokemons = getRandomElements(
-        options,
-        numberOfPokemons,
-        pokemons[notClicked].id
-      );
+        const numberOfPokemons =
+          gameMode === "easy"
+            ? 3
+            : gameMode === "normal"
+            ? 4
+            : gameMode === "hard" && 5;
 
-      console.log(selectedPokemons, "selectedPokemons");
+        const selectedPokemons = getRandomElements(
+          options,
+          numberOfPokemons,
+          pokemons[notClicked].id
+        );
 
-      setShowingPokemons(selectedPokemons);
-    } else {
-      setGameStatus("You Won");
-      setShowingPokemons([]);
-    }
-  };
+        console.log(selectedPokemons, "selectedPokemons");
 
-  const fetchPokeData = (pokemons) => {
-    const fetchPromises = pokemons.map((pokemon) =>
-      fetch(pokemon.url).then((res) => res.json())
-    );
-
-    Promise.all(fetchPromises).then((data) => {
-      const dataNeeded = data.map((pokemon) => {
-        return {
-          id: pokemon.id,
-          name: pokemon.name,
-          sprites: pokemon.sprites,
-          clicked: false,
-        };
-      });
-      setPokeData(dataNeeded);
-    });
-  };
-
-  useEffect(() => {
-    if (gameMode === "normal" || gameMode === "easy" || gameMode === "hard") {
-      const limit = gameMode === "normal" ? 7 : gameMode === "easy" ? 5 : 10;
-      fetch(`https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=0`)
-        .then((res) => res.json())
-        .then((data) => fetchPokeData(data.results));
-    }
-  }, [gameMode]);
+        setShowingPokemons(
+          selectedPokemons.map((id) =>
+            pokemons.find((pokemon) => pokemon.id === id)
+          )
+        );
+      } else {
+        setGameStatus("You Won");
+        setShowingPokemons([]);
+      }
+    },
+    [gameMode, getRandomElements]
+  );
 
   const handleCardClick = (pokemonParam) => {
+    setIsClicked(true);
+    if (isClicked) return;
+
     //* If the pokemon clicked was already clicked before the user loses
     if (pokemonParam.clicked) {
       setGameStatus("Game Over!");
@@ -112,42 +117,101 @@ const App = () => {
       return;
     }
 
-    const index = pokeData.findIndex(
-      (pokemon) => pokemon.id === pokemonParam.id
-    );
-    if (index !== -1) {
-      // fix: scoring
-      setCurrentScore(currentScore + 1);
-      if (currentScore + 1 > bestScore) {
-        setBestScore(currentScore + 1);
-      }
-      setPokeData(
-        pokeData.map((pokemon) => {
-          if (pokemon.id === pokemonParam.id) {
-            return {
-              ...pokemon,
-              clicked: true,
-            };
-          } else {
-            return pokemon;
-          }
-        })
+    setShuffling(true);
+
+    setTimeout(() => {
+      setModesPokemons((prevPokemons) =>
+        prevPokemons.map((pokemon) =>
+          pokemon.id === pokemonParam.id
+            ? { ...pokemon, clicked: true }
+            : pokemon
+        )
       );
-    }
+
+      setRounds(rounds + 1);
+      setCurrentScore((currentScore) => {
+        const newScore = currentScore + 1;
+        if (newScore > bestScore) {
+          setBestScore(newScore);
+        }
+        return newScore;
+      });
+    }, 800);
+
+    setTimeout(() => {
+      setShuffling(false);
+      setIsClicked(false);
+    }, 1500);
+  };
+
+  function updateGameMode(gameMode) {
+    setGameMode(gameMode);
+    const numberOfPokemons =
+      gameMode === "easy"
+        ? 5
+        : gameMode === "normal"
+        ? 7
+        : gameMode === "hard" && 10;
+
+    const shuffled = pokeData.sort(() => 0.5 - Math.random());
+    setModesPokemons(shuffled.slice(0, numberOfPokemons));
+  }
+
+  const fetchPokeData = (pokemons) => {
+    const fetchPromises = pokemons.map((pokemon) =>
+      fetch(pokemon.url).then((res) => res.json())
+    );
+
+    const timeoutPromise = new Promise((resolve) => {
+      setTimeout(() => {
+        setLoaded(true);
+        resolve();
+      }, 2000);
+    });
+
+    Promise.all([...fetchPromises, timeoutPromise]).then((data) => {
+      const dataNeeded = data
+        .filter((item) => item !== undefined)
+        .map((pokemon) => {
+          return {
+            id: pokemon.id,
+            name: pokemon.name,
+            sprites: pokemon.sprites,
+            clicked: false,
+          };
+        });
+      setPokeData(dataNeeded);
+    });
   };
 
   useEffect(() => {
-    if (pokeData.length > 0) {
-      selectRandomPokemons(pokeData);
-    }
-  }, [pokeData]);
+    const limit = 10;
+    fetch(`https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=0`)
+      .then((res) => res.json())
+      .then((data) => fetchPokeData(data.results));
+  }, []);
 
   useEffect(() => {
-    pokeData.map((pokemon) =>
+    if (modesPokemons.length > 0) {
+      selectRandomPokemons(modesPokemons);
+    }
+
+    console.log(modesPokemons, "modesPokemons");
+  }, [modesPokemons, selectRandomPokemons]);
+
+  useEffect(() => {
+    modesPokemons.map((pokemon) =>
       showingPokemons.includes(pokemon.id) ? console.log(pokemon) : pokemon
     );
     console.log(showingPokemons, "showing pokemons");
-  }, [showingPokemons, pokeData]);
+  }, [showingPokemons, modesPokemons]);
+
+  const totalOfRounds =
+    gameMode === "easy"
+      ? 5
+      : gameMode === "normal"
+      ? 7
+      : gameMode === "hard" && 10;
 
   return (
     <>
@@ -155,21 +219,32 @@ const App = () => {
         currentScore={currentScore}
         bestScore={bestScore}
         gameMode={gameMode}
+        returnStart={returnStart}
       />
+
+      <video autoPlay muted loop id="myVideo">
+        <source src={video} type="video/mp4" />
+        Your browser does not support HTML5 video.
+      </video>
 
       <div className="cards">
         {gameMode &&
           showingPokemons.length > 0 &&
-          showingPokemons
-            .map((id) => pokeData.find((pokemon) => pokemon.id === id))
-            .map((pokemon, index) => (
-              <Card
-                key={`${index}${pokemon.name}`}
-                pokemon={pokemon}
-                handleCardClick={handleCardClick}
-              />
-            ))}
+          showingPokemons.map((pokemon, index) => (
+            <Card
+              shuffling={shuffling}
+              key={`${index}${pokemon.name}`}
+              pokemon={pokemon}
+              handleCardClick={handleCardClick}
+            />
+          ))}
       </div>
+
+      {gameMode && showingPokemons.length > 0 && (
+        <p className="rounds-count">
+          Round: {rounds}/{totalOfRounds}
+        </p>
+      )}
 
       {gameStatus !== "playing" && (
         <div className="restart">
@@ -178,13 +253,15 @@ const App = () => {
         </div>
       )}
 
-      {!gameMode && (
+      {!loaded && <Loading />}
+
+      {!gameMode && loaded && (
         <div className="select-modes">
           <h2>Select Mode</h2>
           <div className="modes">
-            <button onClick={() => setGameMode("normal")}>Normal Mode</button>
-            <button onClick={() => setGameMode("easy")}>Easy Mode</button>
-            <button onClick={() => setGameMode("hard")}>Hard Mode</button>
+            <button onClick={() => updateGameMode("easy")}>Easy</button>
+            <button onClick={() => updateGameMode("normal")}>Normal</button>
+            <button onClick={() => updateGameMode("hard")}>Hard</button>
           </div>
         </div>
       )}
